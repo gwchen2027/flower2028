@@ -17,9 +17,11 @@ export function ShareDialog({ letter, recipient, sender, letterElement, onClose 
   const [downloadState, setDownloadState] = useState<Record<string, ActionState>>({});
   const [copied, setCopied] = useState(false);
   const [currentUrl, setCurrentUrl] = useState('');
+  const [hasNativeShare, setHasNativeShare] = useState(false);
 
   useEffect(() => {
     setCurrentUrl(window.location.href);
+    setHasNativeShare(typeof navigator.share === 'function');
   }, []);
 
   const filename = `情书_${recipient}_${sender}`;
@@ -294,7 +296,7 @@ export function ShareDialog({ letter, recipient, sender, letterElement, onClose 
             </button>
 
             {/* Native Share / Copy Link */}
-            {typeof navigator !== 'undefined' && typeof navigator.share === 'function' ? (
+            {hasNativeShare ? (
               <button
                 onClick={handleNativeShare}
                 className="flex flex-col items-center gap-1.5 py-3 px-1 rounded-xl transition-all"
