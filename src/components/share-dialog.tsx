@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { downloadAsImage, downloadAsPDF, downloadAsWord } from '@/lib/download';
 
 interface ShareDialogProps {
@@ -16,6 +16,11 @@ type ActionState = 'idle' | 'loading' | 'success' | 'error';
 export function ShareDialog({ letter, recipient, sender, letterElement, onClose }: ShareDialogProps) {
   const [downloadState, setDownloadState] = useState<Record<string, ActionState>>({});
   const [copied, setCopied] = useState(false);
+  const [currentUrl, setCurrentUrl] = useState('');
+
+  useEffect(() => {
+    setCurrentUrl(window.location.href);
+  }, []);
 
   const filename = `情书_${recipient}_${sender}`;
 
@@ -62,13 +67,13 @@ export function ShareDialog({ letter, recipient, sender, letterElement, onClose 
 
   const handleCopyLink = useCallback(async () => {
     try {
-      await navigator.clipboard.writeText(window.location.href);
+      await navigator.clipboard.writeText(currentUrl);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
       // Fallback for older browsers
       const input = document.createElement('input');
-      input.value = window.location.href;
+      input.value = currentUrl;
       document.body.appendChild(input);
       input.select();
       document.execCommand('copy');
@@ -76,28 +81,27 @@ export function ShareDialog({ letter, recipient, sender, letterElement, onClose 
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     }
-  }, []);
+  }, [currentUrl]);
 
   const shareText = `我写了一封情书给${recipient}，快来试试吧！`;
-  const shareUrl = window.location.href;
 
   const handleShareQQ = () => {
-    const url = `https://connect.qq.com/widget/shareqq/index.html?url=${encodeURIComponent(shareUrl)}&title=${encodeURIComponent('情书生成器')}&desc=${encodeURIComponent(shareText)}`;
+    const url = `https://connect.qq.com/widget/shareqq/index.html?url=${encodeURIComponent(currentUrl)}&title=${encodeURIComponent('情书生成器')}&desc=${encodeURIComponent(shareText)}`;
     window.open(url, '_blank');
   };
 
   const handleShareWeibo = () => {
-    const url = `https://service.weibo.com/share/share.php?url=${encodeURIComponent(shareUrl)}&title=${encodeURIComponent(shareText)}`;
+    const url = `https://service.weibo.com/share/share.php?url=${encodeURIComponent(currentUrl)}&title=${encodeURIComponent(shareText)}`;
     window.open(url, '_blank');
   };
 
   const handleNativeShare = async () => {
-    if (navigator.share) {
+    if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
       try {
         await navigator.share({
           title: '情书生成器',
           text: shareText,
-          url: shareUrl,
+          url: currentUrl,
         });
       } catch {
         // User cancelled or error
