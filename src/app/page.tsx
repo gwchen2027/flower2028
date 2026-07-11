@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
+import { ShareDialog } from '@/components/share-dialog';
 
 /* ------------------------------------------------------------------ */
 /*  Deterministic pseudo-random based on seed                           */
@@ -62,6 +63,7 @@ export default function Home() {
   const [letter, setLetter] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [showLetter, setShowLetter] = useState(false);
+  const [showShareDialog, setShowShareDialog] = useState(false);
   const [error, setError] = useState('');
   const letterRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
@@ -268,8 +270,15 @@ export default function Home() {
             {!isGenerating && letter && (
               <div className="flex justify-center gap-4 mt-8">
                 <button
-                  onClick={handleReset}
+                  onClick={() => setShowShareDialog(true)}
                   className="gold-btn px-6 py-2.5 rounded-lg font-serif text-sm tracking-wider"
+                >
+                  保存与分享
+                </button>
+                <button
+                  onClick={handleReset}
+                  className="px-6 py-2.5 rounded-lg font-serif text-sm tracking-wider border"
+                  style={{ borderColor: 'rgba(201, 169, 110, 0.3)', color: 'rgba(250, 246, 240, 0.7)' }}
                 >
                   再写一封
                 </button>
@@ -310,6 +319,17 @@ export default function Home() {
           以文字之名，诉心中深情
         </footer>
       </div>
+
+      {/* Share Dialog */}
+      {showShareDialog && letter && letterRef.current && (
+        <ShareDialog
+          letter={letter}
+          recipient={recipient}
+          sender={sender}
+          letterElement={letterRef.current}
+          onClose={() => setShowShareDialog(false)}
+        />
+      )}
     </div>
   );
 }
