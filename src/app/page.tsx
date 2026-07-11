@@ -1,35 +1,287 @@
-import type { Metadata } from 'next';
-import Image from 'next/image';
+'use client';
 
-export const metadata: Metadata = {
-  title: '扣子编程 - AI 开发伙伴',
-  description: '扣子编程，你的 AI 开发伙伴已就位',
-};
+import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 
-export default function Home() {
+/* ------------------------------------------------------------------ */
+/*  Deterministic pseudo-random based on seed                           */
+/* ------------------------------------------------------------------ */
+function seededRandom(seed: number): number {
+  const x = Math.sin(seed * 9301 + 49297) * 49297;
+  return x - Math.floor(x);
+}
+
+/* ------------------------------------------------------------------ */
+/*  Petal Component                                                     */
+/* ------------------------------------------------------------------ */
+function Petal({ index }: { index: number }) {
+  const style = useMemo<React.CSSProperties>(() => {
+    const r = (offset: number) => seededRandom(index * 100 + offset);
+    return {
+      left: `${r(1) * 100}%`,
+      ['--drift' as string]: `${(r(2) - 0.5) * 160}px`,
+      ['--spin' as string]: `${r(3) * 720 - 360}deg`,
+      ['--duration' as string]: `${10 + r(4) * 10}s`,
+      ['--delay' as string]: `${r(5) * 12}s`,
+      fontSize: `${12 + r(6) * 10}px`,
+      opacity: 0.4 + r(7) * 0.4,
+    };
+  }, [index]);
+
+  const petals = ['🌸', '🪻', '💮', '🏵️', '✿'];
+  const petal = petals[index % petals.length];
+
   return (
-    <div className="flex h-full items-center justify-center bg-background text-foreground transition-colors duration-300 dark:bg-background dark:text-foreground overflow-hidden min-h-screen">
-      {/* 主容器 */}
-      <main className="flex w-full h-full max-w-3xl flex-col items-center justify-center px-16 py-32 sm:items-center">
-        <div className="flex flex-col items-center justify-between gap-4">
-           <Image
-            src="https://lf-coze-web-cdn.coze.cn/obj/eden-cn/lm-lgvj/ljhwZthlaukjlkulzlp/coze-coding/icon/coze-coding.gif"
-            alt="扣子编程 Logo"
-            width={156}
-            height={130}
-          />
-          <div>
-            <div className="flex flex-col items-center gap-2 text-center sm:items-center sm:text-center">
-              <h1 className="max-w-xl text-base font-semibold leading-tight tracking-tight text-foreground dark:text-foreground">
-                应用开发中
-              </h1>
-              <p className="max-w-2xl text-sm leading-8 text-muted-foreground dark:text-muted-foreground">
-                请稍后，页面即将呈现
-              </p>
+    <span className="petal" style={style}>
+      {petal}
+    </span>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Wax Seal Component                                                  */
+/* ------------------------------------------------------------------ */
+function WaxSeal() {
+  return (
+    <div className="wax-seal mx-auto mt-6">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path
+          d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"
+          fill="rgba(255,255,255,0.25)"
+        />
+      </svg>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Main Page                                                           */
+/* ------------------------------------------------------------------ */
+export default function Home() {
+  const [recipient, setRecipient] = useState('');
+  const [sender, setSender] = useState('');
+  const [letter, setLetter] = useState('');
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [showLetter, setShowLetter] = useState(false);
+  const [error, setError] = useState('');
+  const letterRef = useRef<HTMLDivElement>(null);
+  const abortRef = useRef<AbortController | null>(null);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (abortRef.current) {
+        abortRef.current.abort();
+      }
+    };
+  }, []);
+
+  const generateLetter = useCallback(async () => {
+    if (!recipient.trim() || !sender.trim()) {
+      setError('请填写收信人和写信人的名字');
+      return;
+    }
+
+    setError('');
+    setLetter('');
+    setShowLetter(true);
+    setIsGenerating(true);
+
+    // Abort previous request if any
+    if (abortRef.current) {
+      abortRef.current.abort();
+    }
+    abortRef.current = new AbortController();
+
+    try {
+      const response = await fetch('/api/generate-letter', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          recipient: recipient.trim(),
+          sender: sender.trim(),
+        }),
+        signal: abortRef.current.signal,
+      });
+
+      if (!response.ok) {
+        throw new Error('生成失败，请重试');
+      }
+
+      const reader = response.body?.getReader();
+      if (!reader) throw new Error('无法读取响应流');
+
+      const decoder = new TextDecoder();
+      let fullText = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value, { stream: true });
+        const lines = chunk.split('\n');
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const data = line.slice(6);
+            if (data === '[DONE]') continue;
+            try {
+              const parsed = JSON.parse(data);
+              if (parsed.content) {
+                fullText += parsed.content;
+                setLetter(fullText);
+              }
+            } catch {
+              // skip malformed JSON
+            }
+          }
+        }
+      }
+    } catch (err: unknown) {
+      if (err instanceof Error && err.name === 'AbortError') return;
+      setError(err instanceof Error ? err.message : '生成失败，请重试');
+    } finally {
+      setIsGenerating(false);
+    }
+  }, [recipient, sender]);
+
+  const handleReset = () => {
+    setLetter('');
+    setShowLetter(false);
+    setRecipient('');
+    setSender('');
+    setError('');
+  };
+
+  return (
+    <div className="love-letter-bg min-h-screen relative overflow-hidden">
+      {/* Petals */}
+      {Array.from({ length: 15 }).map((_, i) => (
+        <Petal key={i} index={i} />
+      ))}
+
+      {/* Main Content */}
+      <div className="relative z-10 min-h-screen flex flex-col items-center justify-start px-4 py-12 sm:py-16">
+        {/* Header */}
+        <header className="text-center mb-10 sm:mb-14">
+          <h1
+            className="font-serif text-3xl sm:text-4xl md:text-5xl font-bold tracking-wider mb-3"
+            style={{ color: '#faf6f0' }}
+          >
+            情书生成器
+          </h1>
+          <p
+            className="font-serif text-sm sm:text-base tracking-wide"
+            style={{ color: 'rgba(201, 169, 110, 0.7)' }}
+          >
+            让 AI 为你写下最真挚的情话
+          </p>
+        </header>
+
+        {/* Input Section */}
+        {!showLetter && (
+          <div className="w-full max-w-md space-y-6 mb-10">
+            <div className="space-y-2">
+              <label
+                className="font-serif text-sm tracking-wider block"
+                style={{ color: 'rgba(250, 246, 240, 0.6)' }}
+              >
+                收信人
+              </label>
+              <input
+                type="text"
+                value={recipient}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setRecipient(e.target.value)}
+                placeholder="请输入 TA 的名字"
+                className="input-dark w-full px-4 py-3 rounded-lg font-serif text-base"
+                maxLength={20}
+              />
             </div>
+
+            <div className="space-y-2">
+              <label
+                className="font-serif text-sm tracking-wider block"
+                style={{ color: 'rgba(250, 246, 240, 0.6)' }}
+              >
+                写信人
+              </label>
+              <input
+                type="text"
+                value={sender}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSender(e.target.value)}
+                placeholder="请输入你的名字"
+                className="input-dark w-full px-4 py-3 rounded-lg font-serif text-base"
+                maxLength={20}
+              />
+            </div>
+
+            {error && (
+              <p className="text-center text-sm" style={{ color: '#d4574a' }}>
+                {error}
+              </p>
+            )}
+
+            <button
+              onClick={generateLetter}
+              disabled={isGenerating}
+              className="gold-btn w-full py-3.5 rounded-lg font-serif text-base font-semibold tracking-wider"
+            >
+              {isGenerating ? '正在书写...' : '生成情书'}
+            </button>
           </div>
-        </div>
-      </main>
+        )}
+
+        {/* Letter Display */}
+        {showLetter && (
+          <div className="w-full max-w-2xl">
+            <div
+              ref={letterRef}
+              className="letter-paper letter-animate relative rounded-lg px-8 sm:px-12 md:px-16 py-10 sm:py-14"
+            >
+              {/* Letter content */}
+              <div className="letter-scroll max-h-[65vh] overflow-y-auto pr-2">
+                {letter ? (
+                  <div
+                    className={`letter-text whitespace-pre-wrap text-base sm:text-lg ${
+                      isGenerating ? 'typing-cursor' : ''
+                    }`}
+                  >
+                    {letter}
+                  </div>
+                ) : isGenerating ? (
+                  <div className="letter-text text-center py-8">
+                    <p className="typing-cursor" style={{ color: '#3d2b1f' }}>
+                      正在落笔
+                    </p>
+                  </div>
+                ) : null}
+              </div>
+
+              {/* Wax seal at the bottom */}
+              {!isGenerating && letter && <WaxSeal />}
+            </div>
+
+            {/* Action buttons */}
+            {!isGenerating && letter && (
+              <div className="flex justify-center gap-4 mt-8">
+                <button
+                  onClick={handleReset}
+                  className="gold-btn px-6 py-2.5 rounded-lg font-serif text-sm tracking-wider"
+                >
+                  再写一封
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Footer */}
+        <footer
+          className="mt-auto pt-12 text-center font-serif text-xs tracking-wider"
+          style={{ color: 'rgba(250, 246, 240, 0.2)' }}
+        >
+          以文字之名，诉心中深情
+        </footer>
+      </div>
     </div>
   );
 }
