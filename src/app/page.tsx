@@ -27,7 +27,7 @@ function Petal({ index }: { index: number }) {
     };
   }, [index]);
 
-  const petals = ['🌸', '🪻', '💮', '🏵️', '✿'];
+  const petals = ['🌸', '🌸', '🌺', '🌸', '🌷'];
   const petal = petals[index % petals.length];
 
   return (
@@ -147,9 +147,13 @@ export default function Home() {
   const handleReset = () => {
     setLetter('');
     setShowLetter(false);
-    setRecipient('');
-    setSender('');
     setError('');
+  };
+
+  const handleRetry = () => {
+    setLetter('');
+    setError('');
+    generateLetter();
   };
 
   return (
@@ -269,6 +273,30 @@ export default function Home() {
                 >
                   再写一封
                 </button>
+              </div>
+            )}
+
+            {/* Error with retry */}
+            {!isGenerating && error && !letter && (
+              <div className="text-center mt-6 space-y-3">
+                <p className="text-sm" style={{ color: '#d4574a' }}>
+                  {error}
+                </p>
+                <div className="flex justify-center gap-3">
+                  <button
+                    onClick={handleRetry}
+                    className="gold-btn px-6 py-2.5 rounded-lg font-serif text-sm tracking-wider"
+                  >
+                    重试
+                  </button>
+                  <button
+                    onClick={() => { setShowLetter(false); setError(''); }}
+                    className="px-6 py-2.5 rounded-lg font-serif text-sm tracking-wider border"
+                    style={{ borderColor: 'rgba(201, 169, 110, 0.3)', color: 'rgba(250, 246, 240, 0.6)' }}
+                  >
+                    返回
+                  </button>
+                </div>
               </div>
             )}
           </div>

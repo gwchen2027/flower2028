@@ -117,6 +117,12 @@
     );
   pointer-events: none;
   border-radius: inherit;
+  z-index: 0;
+}
+
+.letter-paper > * {
+  position: relative;
+  z-index: 1;
 }
 
 .letter-text {
