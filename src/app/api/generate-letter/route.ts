@@ -43,20 +43,37 @@ export async function POST(request: NextRequest) {
     });
 
     const encoder = new TextEncoder();
+    let isControllerClosed = false;
+
     const readableStream = new ReadableStream({
       async start(controller) {
         try {
           for await (const chunk of stream) {
+            if (isControllerClosed) break;
             if (chunk.content) {
               const data = JSON.stringify({ content: chunk.content.toString() });
-              controller.enqueue(encoder.encode(`data: ${data}\n\n`));
+              try {
+                controller.enqueue(encoder.encode(`data: ${data}\n\n`));
+              } catch {
+                // Controller already closed (client disconnected)
+                isControllerClosed = true;
+                break;
+              }
             }
           }
-          controller.enqueue(encoder.encode('data: [DONE]\n\n'));
-          controller.close();
+          if (!isControllerClosed) {
+            controller.enqueue(encoder.encode('data: [DONE]\n\n'));
+            controller.close();
+          }
         } catch (streamError) {
-          console.error('Stream error:', streamError);
-          controller.error(streamError);
+          if (!isControllerClosed) {
+            console.error('Stream error:', streamError);
+            try {
+              controller.error(streamError);
+            } catch {
+              // Controller already closed, ignore
+            }
+          }
         }
       },
     });
