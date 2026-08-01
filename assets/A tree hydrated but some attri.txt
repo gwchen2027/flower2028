@@ -1,0 +1,224 @@
+A tree hydrated but some attributes of the server rendered HTML didn't match the client properties. This won't be patched up. This can happen if a SSR-ed Client Component used:
+- A server/client branch `if (typeof window !== 'undefined')`.
+- Variable input such as `Date.now()` or `Math.random()` which changes each time it's called.
+- Date formatting in a user's locale which doesn't match the server.
+- External changing data without sending a snapshot of it along with the HTML.
+- Invalid HTML tag nesting.
+
+It can also happen if the client has a browser extension installed which messes with the HTML before React loaded.
+
+See more info here: https://nextjs.org/docs/messages/react-hydration-error
+
+
+  ...
+    <ErrorBoundary errorComponent={undefined} errorStyles={undefined} errorScripts={undefined}>
+      <LoadingBoundary name="/" loading={null}>
+        <HTTPAccessFallbackBoundary notFound={<SegmentViewNode>} forbidden={undefined} unauthorized={undefined}>
+          <HTTPAccessFallbackErrorBoundary pathname="/" notFound={<SegmentViewNode>} forbidden={undefined} ...>
+            <RedirectBoundary>
+              <RedirectErrorBoundary router={{...}}>
+                <InnerLayoutRouter url="/" tree={[...]} params={{}} cacheNode={{rsc:<Fragment>, ...}} segmentPath={[...]} ...>
+                  <SegmentViewNode type="page" pagePath="page.tsx">
+                    <SegmentTrieNode>
+                    <ClientPageRoot Component={function Home} serverProvidedParams={{...}}>
+                      <Home params={Promise} searchParams={Promise}>
+                        <div data-inspector-line="162" data-inspector-column="4" ...>
+                          <Petal>
+                          <Petal>
+                          <Petal data-inspector-line="165" data-inspector-column="8" ...>
+                            <span
+                              data-inspector-line="35"
+                              data-inspector-column="4"
+                              data-inspector-relative-path="src/app/page.tsx"
+                              className="petal"
+                              style={{
++                               left: "43.72723573396797%"
+-                               left: "43.7272%"
++                               --drift: "-31.417295046849176px"
+-                               --drift: "-31.417295046849176px"
++                               --spin: "-277.27405168523546deg"
+-                               --spin: "-277.27405168523546deg"
++                               --duration: "15.40706849682465s"
+-                               --duration: "15.40706849682465s"
++                               --delay: "0.036538295084028505s"
+-                               --delay: "0.036538295084028505s"
++                               fontSize: "14.85957146275905px"
++                               opacity: 0.6840384596684089
+-                               opacity: "0.684038"
+-                               font-size: "14.8596px"
+                              }}
+                            >
++                             🌺
+                          <Petal data-inspector-line="165" data-inspector-column="8" ...>
+                            <span
+                              data-inspector-line="35"
+                              data-inspector-column="4"
+                              data-inspector-relative-path="src/app/page.tsx"
+                              className="petal"
+                              style={{
++                               left: "89.28862454195041%"
+-                               left: "89.2886%"
++                               --drift: "46.944122658164815px"
+-                               --drift: "46.944122658164815px"
++                               --spin: "166.72372561879456deg"
+-                               --spin: "166.72372561879456deg"
++                               --duration: "19.70946109129727s"
+-                               --duration: "19.70946109129727s"
++                               --delay: "4.1386132589686895s"
+-                               --delay: "4.1386132589686895s"
++                               fontSize: "14.288902376531041px"
++                               opacity: 0.7499840492797489
+-                               opacity: "0.749984"
+-                               font-size: "14.2889px"
+                              }}
+                            >
++                             🌸
+                          <Petal data-inspector-line="165" data-inspector-column="8" ...>
+                            <span
+                              data-inspector-line="35"
+                              data-inspector-column="4"
+                              data-inspector-relative-path="src/app/page.tsx"
+                              className="petal"
+                              style={{
++                               left: "62.061271946004126%"
+-                               left: "62.0613%"
++                               --drift: "35.14151434937958px"
+-                               --drift: "35.14151434937958px"
++                               --spin: "-327.76421193033457deg"
+-                               --spin: "-327.76421193557326deg"
++                               --duration: "16.286473989202932s"
+-                               --duration: "16.286473989202932s"
++                               --delay: "4.388934939328465s"
+-                               --delay: "4.388934939328465s"
++                               fontSize: "14.792447899337276px"
++                               opacity: 0.5558901192391205
+-                               opacity: "0.55589"
+-                               font-size: "14.7924px"
+                              }}
+                            >
++                             🌷
+                          <Petal data-inspector-line="165" data-inspector-column="8" ...>
+                            <span
+                              data-inspector-line="35"
+                              data-inspector-column="4"
+                              data-inspector-relative-path="src/app/page.tsx"
+                              className="petal"
+                              style={{
++                               left: "90.15572088683257%"
+-                               left: "90.1557%"
++                               --drift: "-26.51362894423073px"
+-                               --drift: "-26.51362894423073px"
++                               --spin: "178.8983735803049deg"
+-                               --spin: "178.8983735803049deg"
++                               --duration: "14.077679921174422s"
+-                               --duration: "14.077679921101662s"
++                               --delay: "2.5028197450737935s"
+-                               --delay: "2.5028197450737935s"
++                               fontSize: "12.637841554926126px"
++                               opacity: 0.4023719377099042
+-                               opacity: "0.402372"
+-                               font-size: "12.6378px"
+                              }}
+                            >
++                             🌸
+                          <Petal>
+                          <Petal data-inspector-line="165" data-inspector-column="8" ...>
+                            <span
+                              data-inspector-line="35"
+                              data-inspector-column="4"
+                              data-inspector-relative-path="src/app/page.tsx"
+                              className="petal"
+                              style={{
++                               left: "58.08668777754065%"
+-                               left: "58.0867%"
++                               --drift: "44.65702835528646px"
+-                               --drift: "44.65702835586853px"
++                               --spin: "-143.26605081616435deg"
+-                               --spin: "-143.26605081616435deg"
++                               --duration: "12.168385252880398s"
+-                               --duration: "12.168385252880398s"
++                               --delay: "9.890524314680079s"
+-                               --delay: "9.890524314680079s"
++                               fontSize: "12.007525554829044px"
++                               opacity: 0.5776037028597785
+-                               opacity: "0.577604"
+-                               font-size: "12.0075px"
+                              }}
+                            >
++                             🌺
+                          <Petal>
+                          <Petal>
+                          <Petal data-inspector-line="165" data-inspector-column="8" ...>
+                            <span
+                              data-inspector-line="35"
+                              data-inspector-column="4"
+                              data-inspector-relative-path="src/app/page.tsx"
+                              className="petal"
+                              style={{
++                               left: "5.124239224824123%"
+-                               left: "5.12424%"
++                               --drift: "-33.34775500698015px"
+-                               --drift: "-33.347755005816px"
++                               --spin: "-275.6576240173308deg"
+-                               --spin: "-275.6576240173308deg"
++                               --duration: "12.007036221621092s"
+-                               --duration: "12.007036221621092s"
++                               --delay: "6.778981108816879s"
+-                               --delay: "6.778981108816879s"
++                               fontSize: "14.355163475804147px"
++                               opacity: 0.6783161331200973
+-                               opacity: "0.678316"
+-                               font-size: "14.3552px"
+                              }}
+                            >
++                             🌸
+                          ...
+                          ...
+                  ...
+                ...
+Call Stack
+22
+
+Show 1 ignore-listed frame(s)
+createConsoleError
+.next/dev/static/chunks/5a353_next_dist_1ec5a425._.js (2199:71)
+handleConsoleError
+.next/dev/static/chunks/5a353_next_dist_1ec5a425._.js (2980:54)
+console.error
+.next/dev/static/chunks/5a353_next_dist_1ec5a425._.js (3124:57)
+<unknown>
+.next/dev/static/chunks/5a353_next_dist_compiled_react-dom_535b25e7._.js (3469:25)
+runWithFiberInDEV
+.next/dev/static/chunks/5a353_next_dist_compiled_react-dom_535b25e7._.js (965:74)
+emitPendingHydrationWarnings
+.next/dev/static/chunks/5a353_next_dist_compiled_react-dom_535b25e7._.js (3468:13)
+completeWork
+.next/dev/static/chunks/5a353_next_dist_compiled_react-dom_535b25e7._.js (6897:102)
+runWithFiberInDEV
+.next/dev/static/chunks/5a353_next_dist_compiled_react-dom_535b25e7._.js (965:131)
+completeUnitOfWork
+.next/dev/static/chunks/5a353_next_dist_compiled_react-dom_535b25e7._.js (9627:23)
+performUnitOfWork
+.next/dev/static/chunks/5a353_next_dist_compiled_react-dom_535b25e7._.js (9564:28)
+workLoopConcurrentByScheduler
+.next/dev/static/chunks/5a353_next_dist_compiled_react-dom_535b25e7._.js (9558:58)
+renderRootConcurrent
+.next/dev/static/chunks/5a353_next_dist_compiled_react-dom_535b25e7._.js (9541:71)
+performWorkOnRoot
+.next/dev/static/chunks/5a353_next_dist_compiled_react-dom_535b25e7._.js (9068:150)
+performWorkOnRootViaSchedulerTask
+.next/dev/static/chunks/5a353_next_dist_compiled_react-dom_535b25e7._.js (10230:9)
+MessagePort.performWorkUntilDeadline
+.next/dev/static/chunks/5a353_next_dist_compiled_bf93d0e1._.js (2647:64)
+span
+<anonymous>
+Petal
+.next/dev/static/chunks/workspace_projects_src_b23d2a92._.js (1270:400)
+<unknown>
+.next/dev/static/chunks/workspace_projects_src_b23d2a92._.js (1432:416)
+Array.map
+<anonymous>
+Home
+.next/dev/static/chunks/workspace_projects_src_b23d2a92._.js (1432:16)
+ClientPageRoot
+.next/dev/static/chunks/5a353_next_dist_00a4c6f2._.js (2403:50)

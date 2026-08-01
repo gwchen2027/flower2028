@@ -12,24 +12,37 @@ function seededRandom(seed: number): number {
 }
 
 /* ------------------------------------------------------------------ */
-/*  Petal Component                                                     */
+/*  Petal Component - 仅在客户端渲染以避免 hydration 错误               */
 /* ------------------------------------------------------------------ */
 function Petal({ index }: { index: number }) {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const style = useMemo<React.CSSProperties>(() => {
     const r = (offset: number) => seededRandom(index * 100 + offset);
+    // 限制精度以避免 hydration 不匹配
+    const round = (n: number, decimals: number) => Number(n.toFixed(decimals));
     return {
-      left: `${r(1) * 100}%`,
-      ['--drift' as string]: `${(r(2) - 0.5) * 160}px`,
-      ['--spin' as string]: `${r(3) * 720 - 360}deg`,
-      ['--duration' as string]: `${10 + r(4) * 10}s`,
-      ['--delay' as string]: `${r(5) * 12}s`,
-      fontSize: `${12 + r(6) * 10}px`,
-      opacity: 0.4 + r(7) * 0.4,
+      left: `${round(r(1) * 100, 2)}%`,
+      ['--drift' as string]: `${round((r(2) - 0.5) * 160, 2)}px`,
+      ['--spin' as string]: `${round(r(3) * 720 - 360, 2)}deg`,
+      ['--duration' as string]: `${round(10 + r(4) * 10, 2)}s`,
+      ['--delay' as string]: `${round(r(5) * 12, 2)}s`,
+      fontSize: `${round(12 + r(6) * 10, 2)}px`,
+      opacity: round(0.4 + r(7) * 0.4, 3),
     };
   }, [index]);
 
   const petals = ['🌸', '🌸', '🌺', '🌸', '🌷'];
   const petal = petals[index % petals.length];
+
+  // 服务端渲染时返回空占位，客户端挂载后再显示
+  if (!mounted) {
+    return <span className="petal" style={{ visibility: 'hidden' }}>{petal}</span>;
+  }
 
   return (
     <span className="petal" style={style}>
