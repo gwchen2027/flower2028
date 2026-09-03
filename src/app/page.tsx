@@ -1,7 +1,11 @@
 'use client';
 
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { ShareDialog } from '@/components/share-dialog';
+import { useAuth } from '@/lib/auth-context';
+import { useI18n, LocaleSwitcher } from '@/lib/i18n-context';
 
 /* ------------------------------------------------------------------ */
 /*  Deterministic pseudo-random based on seed                           */
@@ -71,6 +75,10 @@ function WaxSeal() {
 /*  Main Page                                                           */
 /* ------------------------------------------------------------------ */
 export default function Home() {
+  const router = useRouter();
+  const { t } = useI18n();
+  const { user, member, loading: authLoading, supabase, signOut } = useAuth();
+
   const [recipient, setRecipient] = useState('');
   const [sender, setSender] = useState('');
   const [letter, setLetter] = useState('');
@@ -78,8 +86,11 @@ export default function Home() {
   const [showLetter, setShowLetter] = useState(false);
   const [showShareDialog, setShowShareDialog] = useState(false);
   const [error, setError] = useState('');
+  const [hydrated, setHydrated] = useState(false);
   const letterRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
+
+  useEffect(() => setHydrated(true), []);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -90,9 +101,15 @@ export default function Home() {
     };
   }, []);
 
+  const canWrite = hydrated && !authLoading && user && member?.is_member && member.credits > 0;
+
   const generateLetter = useCallback(async () => {
+    if (!user || !supabase) {
+      router.push('/login');
+      return;
+    }
     if (!recipient.trim() || !sender.trim()) {
-      setError('请填写收信人和写信人的名字');
+      setError(t('error.gen_failed'));
       return;
     }
 
@@ -101,16 +118,16 @@ export default function Home() {
     setShowLetter(true);
     setIsGenerating(true);
 
-    // Abort previous request if any
-    if (abortRef.current) {
-      abortRef.current.abort();
-    }
+    if (abortRef.current) abortRef.current.abort();
     abortRef.current = new AbortController();
 
     try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+
       const response = await fetch('/api/generate-letter', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'x-session': token || '' },
         body: JSON.stringify({
           recipient: recipient.trim(),
           sender: sender.trim(),
@@ -118,15 +135,12 @@ export default function Home() {
         signal: abortRef.current.signal,
       });
 
-      if (!response.ok) {
-        throw new Error('生成失败，请重试');
-      }
-
       const reader = response.body?.getReader();
-      if (!reader) throw new Error('无法读取响应流');
+      if (!reader) throw new Error(t('error.gen_failed'));
 
       const decoder = new TextDecoder();
       let fullText = '';
+      let streamError = '';
 
       while (true) {
         const { done, value } = await reader.read();
@@ -144,6 +158,8 @@ export default function Home() {
               if (parsed.content) {
                 fullText += parsed.content;
                 setLetter(fullText);
+              } else if (parsed.error) {
+                streamError = parsed.message || parsed.error;
               }
             } catch {
               // skip malformed JSON
@@ -151,13 +167,17 @@ export default function Home() {
           }
         }
       }
+
+      if (streamError) {
+        setError(streamError);
+      }
     } catch (err: unknown) {
       if (err instanceof Error && err.name === 'AbortError') return;
-      setError(err instanceof Error ? err.message : '生成失败，请重试');
+      setError(err instanceof Error ? err.message : t('error.gen_failed'));
     } finally {
       setIsGenerating(false);
     }
-  }, [recipient, sender]);
+  }, [recipient, sender, user, supabase, router, t]);
 
   const handleReset = () => {
     setLetter('');
@@ -178,6 +198,35 @@ export default function Home() {
         <Petal key={i} index={i} />
       ))}
 
+      {/* Top nav */}
+      <nav className="absolute top-0 left-0 right-0 z-20 flex items-center justify-between px-4 sm:px-8 py-4">
+        <Link href="/pricing" className="font-sans text-xs text-[var(--text-muted)] hover:text-[var(--gold)] transition-colors tracking-wider">
+          {t('nav.pricing')}
+        </Link>
+        <div className="flex items-center gap-3">
+          {hydrated && member && (
+            <span className="hidden sm:inline font-sans text-xs text-[var(--gold)]/80">
+              {member.is_member ? `✦ ${member.credits} ${t('member.credits.unit')}` : ''}
+            </span>
+          )}
+          {hydrated && !authLoading && user ? (
+            <>
+              <Link href="/pricing" className="font-sans text-xs text-[var(--text-muted)] hover:text-[var(--gold)] transition-colors">
+                {t('nav.account')}
+              </Link>
+              <button onClick={async () => { await signOut(); }} className="font-sans text-xs text-[var(--text-muted)] hover:text-[var(--gold)] transition-colors">
+                {t('nav.logout')}
+              </button>
+            </>
+          ) : (
+            <Link href="/login" className="font-sans text-xs text-[var(--gold)] hover:opacity-80 transition-opacity">
+              {t('nav.login')} / {t('nav.register')}
+            </Link>
+          )}
+          <LocaleSwitcher />
+        </div>
+      </nav>
+
       {/* Main Content */}
       <div className="relative z-10 min-h-screen flex flex-col items-center justify-start px-4 py-12 sm:py-16">
         {/* Header */}
@@ -186,31 +235,60 @@ export default function Home() {
             className="font-serif text-3xl sm:text-4xl md:text-5xl font-bold tracking-wider mb-3"
             style={{ color: '#faf6f0' }}
           >
-            情书生成器
+            {t('app.title')}
           </h1>
           <p
             className="font-serif text-sm sm:text-base tracking-wide"
             style={{ color: 'rgba(201, 169, 110, 0.7)' }}
           >
-            让 AI 为你写下最真挚的情话
+            {t('app.subtitle')}
           </p>
         </header>
 
+        {/* Guest gate */}
+        {hydrated && !authLoading && !user && (
+          <div className="w-full max-w-md letter-paper rounded-lg px-8 py-10 text-center">
+            <p className="font-serif text-xl text-[var(--ink)] mb-3">❦</p>
+            <p className="font-serif text-lg text-[var(--ink)] mb-2">{t('home.guest.title')}</p>
+            <p className="font-serif text-sm text-[var(--ink-soft)] mb-6">{t('home.guest.desc')}</p>
+            <Link href="/login" className="gold-btn inline-block px-10 py-3 rounded-lg font-serif text-base font-semibold tracking-wider">
+              {t('nav.login')} / {t('nav.register')}
+            </Link>
+          </div>
+        )}
+
+        {/* Paywall gate */}
+        {hydrated && !authLoading && user && !canWrite && !showLetter && (
+          <div className="w-full max-w-md letter-paper rounded-lg px-8 py-10 text-center">
+            <p className="font-serif text-xl text-[var(--gold)] mb-3">✦</p>
+            <p className="font-serif text-lg text-[var(--ink)] mb-2">{t('home.paywall.title')}</p>
+            <p className="font-serif text-sm text-[var(--ink-soft)] mb-6 leading-relaxed">{t('home.paywall.desc')}</p>
+            <Link href="/pricing" className="gold-btn inline-block px-10 py-3 rounded-lg font-serif text-base font-semibold tracking-wider">
+              {t('home.paywall.cta')}
+            </Link>
+          </div>
+        )}
+
         {/* Input Section */}
-        {!showLetter && (
+        {!showLetter && (!user || canWrite) && (
           <div className="w-full max-w-md space-y-6 mb-10">
+            {user && member?.is_member && (
+              <p className="text-center font-sans text-xs" style={{ color: 'rgba(201,169,110,0.75)' }}>
+                {t('member.credits')}：{member.credits} {t('member.credits.unit')}
+              </p>
+            )}
             <div className="space-y-2">
               <label
                 className="font-serif text-sm tracking-wider block"
                 style={{ color: 'rgba(250, 246, 240, 0.6)' }}
               >
-                收信人
+                {t('home.recipient')}
               </label>
               <input
                 type="text"
                 value={recipient}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => setRecipient(e.target.value)}
-                placeholder="请输入 TA 的名字"
+                placeholder={t('home.recipient.ph')}
                 className="input-dark w-full px-4 py-3 rounded-lg font-serif text-base"
                 maxLength={20}
               />
@@ -221,13 +299,13 @@ export default function Home() {
                 className="font-serif text-sm tracking-wider block"
                 style={{ color: 'rgba(250, 246, 240, 0.6)' }}
               >
-                写信人
+                {t('home.sender')}
               </label>
               <input
                 type="text"
                 value={sender}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSender(e.target.value)}
-                placeholder="请输入你的名字"
+                placeholder={t('home.sender.ph')}
                 className="input-dark w-full px-4 py-3 rounded-lg font-serif text-base"
                 maxLength={20}
               />
@@ -244,7 +322,7 @@ export default function Home() {
               disabled={isGenerating}
               className="gold-btn w-full py-3.5 rounded-lg font-serif text-base font-semibold tracking-wider"
             >
-              {isGenerating ? '正在书写...' : '生成情书'}
+              {isGenerating ? t('home.generating') : t('home.generate')}
             </button>
           </div>
         )}
@@ -286,14 +364,14 @@ export default function Home() {
                   onClick={() => setShowShareDialog(true)}
                   className="gold-btn px-6 py-2.5 rounded-lg font-serif text-sm tracking-wider"
                 >
-                  保存与分享
+                  {t('letter.share')}
                 </button>
                 <button
                   onClick={handleReset}
                   className="px-6 py-2.5 rounded-lg font-serif text-sm tracking-wider border"
                   style={{ borderColor: 'rgba(201, 169, 110, 0.3)', color: 'rgba(250, 246, 240, 0.7)' }}
                 >
-                  再写一封
+                  {t('letter.again')}
                 </button>
               </div>
             )}
@@ -304,19 +382,24 @@ export default function Home() {
                 <p className="text-sm" style={{ color: '#d4574a' }}>
                   {error}
                 </p>
+                {(error.includes(t('error.member_required')) || error.includes('NO_CREDITS') || error.includes(t('error.no_credits'))) ? (
+                  <Link href="/pricing" className="gold-btn inline-block px-6 py-2.5 rounded-lg font-serif text-sm tracking-wider">
+                    {t('home.paywall.cta')}
+                  </Link>
+                ) : null}
                 <div className="flex justify-center gap-3">
                   <button
                     onClick={handleRetry}
                     className="gold-btn px-6 py-2.5 rounded-lg font-serif text-sm tracking-wider"
                   >
-                    重试
+                    {t('letter.retry')}
                   </button>
                   <button
                     onClick={() => { setShowLetter(false); setError(''); }}
                     className="px-6 py-2.5 rounded-lg font-serif text-sm tracking-wider border"
                     style={{ borderColor: 'rgba(201, 169, 110, 0.3)', color: 'rgba(250, 246, 240, 0.6)' }}
                   >
-                    返回
+                    {t('letter.back')}
                   </button>
                 </div>
               </div>

@@ -39,3 +39,17 @@ src/
 
 ## 设计规范
 详见 `DESIGN.md`。核心风格：烛光信笺、古典浪漫、手写温度。
+
+## 会员与付费（T2 账户体系）
+- **认证**：Supabase Auth 邮箱注册/登录（配置动态注入，前端 `@/lib/supabase-browser`，后端校验 `x-session` header）。
+- **鉴权工具**：`src/lib/member.ts`（`getAuthUser` 解析登录、`getOrCreateProfile` 读会员资料）。
+- **付费模型**：会员 30 元/月 = 30 天有效期 + 30 封额度；每生成 1 封扣 1 额度（原子 SQL 函数 `consume_credit`）。
+- **兑换码**：`redeem_codes` 表 + 原子 SQL 函数 `redeem_code`（防并发竞态）。DEV 测试码：`WELCOME30`、`LOVE30DEMO`。
+- **在线支付**：`/api/member/order`，需配置 `ALIPAY_APP_ID` / `WECHAT_MCH_ID` 等商户凭证；未配置时如实返回 503（不 Mock 支付）。
+- **数据表**：`member_profiles` / `redeem_codes` / `payment_orders` / `usage_records`（定义于 `src/storage/database/shared/schema.ts`，经 `coze-coding-ai db upgrade` 同步）。
+- **接口鉴权**：生成信件接口 `/api/generate-letter` 强制登录 + 会员 + 额度。
+
+## 多语言（i18n）
+- 字典 `src/lib/i18n.ts`（zh-CN / zh-TW / en / ja），Provider `src/lib/i18n-context.tsx`，Hook `useI18n()` 的 `t(key)`。
+- 语言选择存 localStorage，`<LocaleSwitcher>` 切换。
+

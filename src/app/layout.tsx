@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Noto_Serif_SC } from 'next/font/google';
 import './globals.css';
+import { Providers } from '@/components/providers';
 
 const notoSerifSC = Noto_Serif_SC({
   subsets: ['latin'],
@@ -22,7 +23,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="zh-CN">
-      <body className={`${notoSerifSC.variable} antialiased`}>{children}</body>
+      <body className={`${notoSerifSC.variable} antialiased`}>
+        <Providers>{children}</Providers>
+      </body>
     </html>
   );
 }
